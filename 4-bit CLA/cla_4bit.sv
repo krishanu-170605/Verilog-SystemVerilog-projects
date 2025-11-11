@@ -1,32 +1,32 @@
-module carry_lookahead_adder #(
-    parameter int N = 4
-)(
-    input  logic [N-1:0] A, B,
-    input  logic          Cin,
-    output logic [N-1:0]  Sum,
-    output logic          Cout
+module carry_lookahead_adder #(parameter WIDTH = 4)(
+    input  logic [WIDTH-1:0] a, b,
+    output logic [WIDTH-1:0] sum,
+    output logic carry_out
 );
 
-    logic [N-1:0] G, P;
-    logic [N:0]   C;
+    logic [WIDTH-1:0] g, p;
+    logic [WIDTH:0] c;
+    assign c[0] = 1'b0;
 
-    assign C[0] = Cin;
+    // Generate and propagate
+    assign g = a & b;
+    assign p = a ^ b;
 
-    assign G = A & B; //Carry generate
-    assign P = A ^ B; // Carry propagate
-
-    // Carry Look-Ahead Logic
-    genvar i;
+    genvar i, j;
     generate
-        for (i = 0; i < N; i++) begin : carry_block
-            assign C[i+1] = G[i] | (P[i] & C[i]);
+        for (i = 0; i < WIDTH; i++) begin : carry_bits
+            logic [i:0] term;
+            assign term[0] = g[i];
+            // Build the propagate-generate chain
+            for (j = 0; j < i; j++) begin : prop_chain
+                assign term[j+1] = (&p[i -: (j+1)]) & g[i-j-1];
+            end
+            // Combine all terms plus the all-propagate * c0 case
+            assign c[i+1] = (|term) | ((&p[i:0]) & c[0]);
         end
     endgenerate
 
-    // Sum
-    assign Sum = P ^ C[N-1:0];
-
-    // Carry out
-    assign Cout = C[N];
+    assign sum = a ^ b ^ c[WIDTH-1:0];
+    assign carry_out = c[WIDTH];
 
 endmodule
